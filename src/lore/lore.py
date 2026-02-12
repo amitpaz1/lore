@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import struct
+from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from ulid import ULID
@@ -279,6 +281,98 @@ class Lore:
     def delete(self, lesson_id: str) -> bool:
         """Delete a lesson by ID."""
         return self._store.delete(lesson_id)
+
+    def export_lessons(
+        self,
+        path: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Export all lessons as JSON-serializable dicts.
+
+        If *path* is given, writes ``{"version": 1, "lessons": [...]}``
+        to that file and returns the lesson list.
+        """
+        lessons = self._store.list(project=self.project)
+        serialized: List[Dict[str, Any]] = []
+        for lesson in lessons:
+            d = asdict(lesson)
+            # embedding is bytes — drop it from export (not portable)
+            d.pop("embedding", None)
+            serialized.append(d)
+
+        if path is not None:
+            payload: Dict[str, Any] = {
+                "version": 1,
+                "lessons": serialized,
+            }
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+
+        return serialized
+
+    def import_lessons(
+        self,
+        path: Optional[str] = None,
+        data: Optional[Union[List[Dict[str, Any]], Dict[str, Any]]] = None,
+    ) -> int:
+        """Import lessons from a file or data structure.
+
+        Accepts either the wrapped format ``{"version": 1, "lessons": [...]}``
+        or a raw list of lesson dicts.  Skips duplicates (by ID).
+
+        Returns the number of lessons actually imported.
+        """
+        if path is not None:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+        if data is None:
+            raise ValueError("Either path or data must be provided")
+
+        # Unwrap versioned format
+        if isinstance(data, dict):
+            lessons_raw: List[Dict[str, Any]] = data.get("lessons", [])
+        else:
+            lessons_raw = data
+
+        # Gather existing IDs for duplicate check
+        existing_ids = {l.id for l in self._store.list()}
+
+        imported = 0
+        for item in lessons_raw:
+            lid = item.get("id")
+            if lid and lid in existing_ids:
+                continue
+
+            # Re-embed for vector search
+            embed_text = f"{item.get('problem', '')} {item.get('resolution', '')}"
+            ctx = item.get("context")
+            if ctx:
+                embed_text = f"{embed_text} {ctx}"
+            embedding_vec = self._embedder.embed(embed_text)
+            embedding_bytes = _serialize_embedding(embedding_vec)
+
+            lesson = Lesson(
+                id=item.get("id", str(ULID())),
+                problem=item.get("problem", ""),
+                resolution=item.get("resolution", ""),
+                context=item.get("context"),
+                tags=item.get("tags", []),
+                confidence=item.get("confidence", 0.5),
+                source=item.get("source"),
+                project=item.get("project"),
+                embedding=embedding_bytes,
+                created_at=item.get("created_at", _utc_now_iso()),
+                updated_at=item.get("updated_at", _utc_now_iso()),
+                expires_at=item.get("expires_at"),
+                upvotes=item.get("upvotes", 0),
+                downvotes=item.get("downvotes", 0),
+                meta=item.get("meta"),
+            )
+            self._store.save(lesson)
+            existing_ids.add(lesson.id)
+            imported += 1
+
+        return imported
 
 
 def _utc_now_iso() -> str:

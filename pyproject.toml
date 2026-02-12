@@ -20,6 +20,9 @@ dev = [
     "ruff>=0.1.0",
 ]
 
+[project.scripts]
+lore = "lore.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/lore"]
 
