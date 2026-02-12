@@ -1,4 +1,4 @@
-<![CDATA[# Lore
+# Lore
 
 [![PyPI](https://img.shields.io/pypi/v/lore-sdk)](https://pypi.org/project/lore-sdk/)
 [![npm](https://img.shields.io/npm/v/lore-sdk)](https://www.npmjs.com/package/lore-sdk)
@@ -216,4 +216,3 @@ See [`examples/`](examples/) for runnable scripts:
 ## License
 
 MIT
-]]>
