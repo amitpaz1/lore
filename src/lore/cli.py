@@ -215,7 +215,23 @@ def build_parser() -> argparse.ArgumentParser:
     kr = keys_sub.add_parser("revoke", help="Revoke an API key")
     kr.add_argument("key_id", help="Key ID to revoke")
 
+    # mcp
+    sub.add_parser("mcp", help="Start MCP server (stdio transport)")
+
     return parser
+
+
+def cmd_mcp(args: argparse.Namespace) -> None:
+    try:
+        from lore.mcp.server import run_server
+    except ImportError:
+        print(
+            "Error: MCP dependencies not installed.\n"
+            "Install with: pip install lore-sdk[mcp]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    run_server()
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
@@ -245,6 +261,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         "list": cmd_list,
         "export": cmd_export,
         "import": cmd_import,
+        "mcp": cmd_mcp,
     }
     handlers[args.command](args)
 

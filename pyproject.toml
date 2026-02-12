@@ -30,6 +30,9 @@ dependencies = [
 remote = [
     "httpx>=0.24.0",
 ]
+mcp = [
+    "mcp>=1.0.0",
+]
 server = [
     "fastapi>=0.100.0",
     "uvicorn>=0.22.0",
