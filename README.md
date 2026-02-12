@@ -17,6 +17,8 @@ Lore fixes this. It's a tiny library — no server, no infra — that gives agen
 
 **What Lore is not:** A conversation memory store (see Mem0/Zep), a vector database, or a RAG framework.
 
+Integrates with [AgentLens](https://github.com/amitpaz1/agentlens) as an optional memory backend.
+
 ## Quickstart
 
 ```python
@@ -258,6 +260,17 @@ See [`examples/`](examples/) for runnable scripts:
 - [`basic_usage.py`](examples/basic_usage.py) — publish, query, format
 - [`custom_embeddings.py`](examples/custom_embeddings.py) — bring your own embedding function
 - [`redaction_demo.py`](examples/redaction_demo.py) — see redaction in action
+
+## 🔗 Part of the AgentKit Ecosystem
+
+| Project | What it does | Link |
+|---------|-------------|------|
+| **AgentLens** | Observability & audit trail for AI agents | [github.com/amitpaz1/agentlens](https://github.com/amitpaz1/agentlens) |
+| **AgentGate** | Human-in-the-loop approval gateway | [github.com/amitpaz1/agentgate](https://github.com/amitpaz1/agentgate) |
+| **FormBridge** | Structured data collection for AI agents | [github.com/amitpaz1/formbridge](https://github.com/amitpaz1/formbridge) |
+| **Lore** | Cross-agent memory and lesson sharing | **You are here** |
+
+**Together:** Agents collect data (FormBridge) → request approval to act (AgentGate) → share lessons learned (Lore) → all observed and audited (AgentLens).
 
 ## License
 
