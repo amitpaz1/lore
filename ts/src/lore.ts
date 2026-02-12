@@ -75,7 +75,7 @@ export class Lore {
         throw new Error('apiUrl and apiKey are required when store is "remote"');
       }
       this.store = new RemoteStore({ apiUrl: options.apiUrl, apiKey: options.apiKey });
-    } else if (options?.store && options.store !== 'remote') {
+    } else if (options?.store && typeof options.store !== 'string') {
       this.store = options.store;
     } else {
       const dbPath = options?.dbPath ?? join(homedir(), '.lore', 'default.db');
