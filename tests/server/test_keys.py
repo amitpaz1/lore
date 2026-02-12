@@ -57,8 +57,10 @@ def _make_mock_pool(fetchrow_return=None, fetch_return=None, fetchval_return=Non
 @pytest_asyncio.fixture
 async def client():
     from lore.server.auth import _key_cache, _last_used_updates
+    from lore.server.middleware import RateLimiter, set_rate_limiter
     _key_cache.clear()
     _last_used_updates.clear()
+    set_rate_limiter(RateLimiter())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
@@ -208,7 +210,7 @@ async def test_revoke_last_root_key_blocked(client):
          patch("lore.server.routes.keys.get_pool", return_value=mock_pool):
         resp = await client.delete("/v1/keys/key-1", headers=_auth_headers())
     assert resp.status_code == 400
-    assert "last root key" in resp.json()["detail"]
+    assert "last root key" in resp.json().get("message", resp.json().get("detail", ""))
 
 
 @pytest.mark.asyncio
@@ -292,4 +294,4 @@ async def test_revoke_already_revoked_key(client):
          patch("lore.server.routes.keys.get_pool", return_value=mock_pool):
         resp = await client.delete("/v1/keys/key-2", headers=_auth_headers())
     assert resp.status_code == 400
-    assert "already revoked" in resp.json()["detail"]
+    assert "already revoked" in resp.json().get("message", resp.json().get("detail", ""))

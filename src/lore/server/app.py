@@ -29,6 +29,7 @@ except ImportError:
 from lore.server.auth import AuthContext, AuthError, get_auth_context
 from lore.server.config import settings
 from lore.server.db import close_pool, get_pool, init_pool, run_migrations
+from lore.server.middleware import install_middleware
 from lore.server.routes.keys import router as keys_router
 from lore.server.routes.lessons import router as lessons_router
 
@@ -60,12 +61,15 @@ app = FastAPI(
 app.include_router(keys_router)
 app.include_router(lessons_router)
 
+# Install middleware and error handlers
+install_middleware(app)
+
 
 @app.exception_handler(AuthError)
 async def auth_error_handler(request: Request, exc: AuthError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": exc.error_code},
+        content={"error": exc.error_code, "message": exc.error_code},
     )
 
 

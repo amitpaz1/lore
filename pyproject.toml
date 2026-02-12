@@ -59,6 +59,9 @@ packages = ["src/lore"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: requires Docker Compose stack (deselect with -m 'not integration')",
+]
 
 [tool.ruff]
 target-version = "py39"

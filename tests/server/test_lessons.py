@@ -17,6 +17,7 @@ from httpx import ASGITransport, AsyncClient
 
 from lore.server.app import app
 from lore.server.auth import _key_cache, _last_used_updates
+from lore.server.middleware import RateLimiter, set_rate_limiter
 
 # ── Fixtures ───────────────────────────────────────────────────────
 
@@ -117,6 +118,7 @@ def _make_mock_pool(
 async def client():
     _key_cache.clear()
     _last_used_updates.clear()
+    set_rate_limiter(RateLimiter())
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
