@@ -8,10 +8,17 @@ from typing import Generator
 
 import pytest
 
+from typing import List
+
 from lore import Lesson, Lore
 from lore.store.base import Store
 from lore.store.memory import MemoryStore
 from lore.store.sqlite import SqliteStore
+
+
+def _stub_embed(text: str) -> List[float]:
+    """Trivial embedding function for tests that don't need real embeddings."""
+    return [0.0] * 384
 
 
 @pytest.fixture
@@ -121,7 +128,7 @@ class TestLore:
     """Tests for the Lore class."""
 
     def test_publish_and_get(self) -> None:
-        lore = Lore(store=MemoryStore())
+        lore = Lore(store=MemoryStore(), embedding_fn=_stub_embed)
         lid = lore.publish(problem="p", resolution="r")
         assert len(lid) == 26  # ULID length
         lesson = lore.get(lid)
@@ -130,14 +137,14 @@ class TestLore:
         assert lesson.created_at != ""
 
     def test_publish_with_project_default(self) -> None:
-        lore = Lore(project="myproj", store=MemoryStore())
+        lore = Lore(project="myproj", store=MemoryStore(), embedding_fn=_stub_embed)
         lid = lore.publish(problem="p", resolution="r")
         lesson = lore.get(lid)
         assert lesson is not None
         assert lesson.project == "myproj"
 
     def test_publish_project_override(self) -> None:
-        lore = Lore(project="default", store=MemoryStore())
+        lore = Lore(project="default", store=MemoryStore(), embedding_fn=_stub_embed)
         lid = lore.publish(
             problem="p", resolution="r", project="override",
         )
@@ -146,7 +153,7 @@ class TestLore:
         assert lesson.project == "override"
 
     def test_list_and_delete(self) -> None:
-        lore = Lore(store=MemoryStore())
+        lore = Lore(store=MemoryStore(), embedding_fn=_stub_embed)
         lid = lore.publish(problem="p", resolution="r")
         assert len(lore.list()) == 1
         lore.delete(lid)
@@ -154,19 +161,19 @@ class TestLore:
         assert lore.get(lid) is None
 
     def test_list_filter_project(self) -> None:
-        lore = Lore(store=MemoryStore())
+        lore = Lore(store=MemoryStore(), embedding_fn=_stub_embed)
         lore.publish(problem="p", resolution="r", project="a")
         lore.publish(problem="p", resolution="r", project="b")
         assert len(lore.list(project="a")) == 1
 
     def test_list_limit(self) -> None:
-        lore = Lore(store=MemoryStore())
+        lore = Lore(store=MemoryStore(), embedding_fn=_stub_embed)
         for _ in range(5):
             lore.publish(problem="p", resolution="r")
         assert len(lore.list(limit=3)) == 3
 
     def test_confidence_validation(self) -> None:
-        lore = Lore(store=MemoryStore())
+        lore = Lore(store=MemoryStore(), embedding_fn=_stub_embed)
         with pytest.raises(ValueError, match="confidence"):
             lore.publish(problem="p", resolution="r", confidence=1.5)
         with pytest.raises(ValueError, match="confidence"):
@@ -175,13 +182,13 @@ class TestLore:
     def test_context_manager(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db = os.path.join(tmpdir, "test.db")
-            with Lore(db_path=db) as lore:
+            with Lore(db_path=db, embedding_fn=_stub_embed) as lore:
                 lid = lore.publish(problem="p", resolution="r")
                 assert lore.get(lid) is not None
 
     def test_sqlite_default_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db = os.path.join(tmpdir, "test.db")
-            lore = Lore(db_path=db)
+            lore = Lore(db_path=db, embedding_fn=_stub_embed)
             lid = lore.publish(problem="p", resolution="r")
             assert lore.get(lid) is not None

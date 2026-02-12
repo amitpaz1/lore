@@ -3,14 +3,47 @@
 from __future__ import annotations
 
 import os
+import struct
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Callable, List, Optional
 
+import numpy as np
 from ulid import ULID
 
+from lore.embed.base import Embedder
+from lore.embed.local import LocalEmbedder
 from lore.store.base import Store
 from lore.store.sqlite import SqliteStore
-from lore.types import Lesson
+from lore.types import Lesson, QueryResult
+
+# Type alias for user-provided embedding functions
+EmbeddingFn = Callable[[str], List[float]]
+
+_EMBEDDING_DIM = 384
+
+
+def _serialize_embedding(vec: List[float]) -> bytes:
+    """Serialize a float list to bytes (float32)."""
+    return struct.pack(f"{len(vec)}f", *vec)
+
+
+def _deserialize_embedding(data: bytes) -> np.ndarray:
+    """Deserialize bytes to numpy array (float32)."""
+    count = len(data) // 4
+    return np.array(struct.unpack(f"{count}f", data), dtype=np.float32)
+
+
+class _FnEmbedder(Embedder):
+    """Wraps a user-provided embedding function as an Embedder."""
+
+    def __init__(self, fn: EmbeddingFn) -> None:
+        self._fn = fn
+
+    def embed(self, text: str) -> List[float]:
+        return self._fn(text)
+
+    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        return [self._fn(t) for t in texts]
 
 
 class Lore:
@@ -20,7 +53,7 @@ class Lore:
 
         lore = Lore()
         lesson_id = lore.publish(problem="...", resolution="...")
-        lesson = lore.get(lesson_id)
+        results = lore.query("how to handle rate limits")
     """
 
     def __init__(
@@ -28,6 +61,8 @@ class Lore:
         project: Optional[str] = None,
         db_path: Optional[str] = None,
         store: Optional[Store] = None,
+        embedding_fn: Optional[EmbeddingFn] = None,
+        embedder: Optional[Embedder] = None,
     ) -> None:
         self.project = project
         if store is not None:
@@ -38,6 +73,14 @@ class Lore:
                     os.path.expanduser("~"), ".lore", "default.db"
                 )
             self._store = SqliteStore(db_path)
+
+        # Resolve embedder: explicit embedder > embedding_fn > default local
+        if embedder is not None:
+            self._embedder = embedder
+        elif embedding_fn is not None:
+            self._embedder = _FnEmbedder(embedding_fn)
+        else:
+            self._embedder = LocalEmbedder()
 
     def close(self) -> None:
         """Close underlying store if it supports closing."""
@@ -65,6 +108,14 @@ class Lore:
             raise ValueError(
                 f"confidence must be between 0.0 and 1.0, got {confidence}"
             )
+
+        # Build text for embedding
+        embed_text = f"{problem} {resolution}"
+        if context:
+            embed_text = f"{embed_text} {context}"
+        embedding_vec = self._embedder.embed(embed_text)
+        embedding_bytes = _serialize_embedding(embedding_vec)
+
         now = _utc_now_iso()
         lesson = Lesson(
             id=str(ULID()),
@@ -75,11 +126,71 @@ class Lore:
             confidence=confidence,
             source=source,
             project=project or self.project,
+            embedding=embedding_bytes,
             created_at=now,
             updated_at=now,
         )
         self._store.save(lesson)
         return lesson.id
+
+    def query(
+        self,
+        text: str,
+        tags: Optional[List[str]] = None,
+        limit: int = 5,
+        min_confidence: float = 0.0,
+    ) -> List[QueryResult]:
+        """Query lessons by semantic similarity, optionally filtered by tags.
+
+        Returns a list of QueryResult ordered by descending similarity score.
+        """
+        # Get all candidates (scope to project if set)
+        all_lessons = self._store.list(project=self.project)
+
+        # Filter by tags
+        if tags:
+            tag_set = set(tags)
+            all_lessons = [
+                l for l in all_lessons
+                if tag_set.issubset(set(l.tags))
+            ]
+
+        # Filter by min_confidence
+        if min_confidence > 0.0:
+            all_lessons = [
+                l for l in all_lessons if l.confidence >= min_confidence
+            ]
+
+        # Filter out lessons without embeddings
+        candidates = [l for l in all_lessons if l.embedding]
+        if not candidates:
+            return []
+
+        # Embed query
+        query_vec = np.array(
+            self._embedder.embed(text), dtype=np.float32
+        )
+
+        # Vectorized cosine similarity
+        embeddings = np.array(
+            [_deserialize_embedding(l.embedding) for l in candidates],  # type: ignore[arg-type]
+            dtype=np.float32,
+        )
+        # Normalize (embeddings should already be normalized, but be safe)
+        query_norm = query_vec / max(np.linalg.norm(query_vec), 1e-9)
+        emb_norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        emb_norms = np.clip(emb_norms, 1e-9, None)
+        embeddings_normed = embeddings / emb_norms
+
+        scores = embeddings_normed @ query_norm
+
+        # Build results sorted by score descending
+        results = [
+            QueryResult(lesson=candidates[i], score=float(scores[i]))
+            for i in range(len(candidates))
+        ]
+        results.sort(key=lambda r: r.score, reverse=True)
+        return results[:limit]
 
     def get(self, lesson_id: str) -> Optional[Lesson]:
         """Get a lesson by ID."""

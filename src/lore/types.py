@@ -25,3 +25,11 @@ class Lesson:
     upvotes: int = 0
     downvotes: int = 0
     meta: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class QueryResult:
+    """A query result containing a lesson and its relevance score."""
+
+    lesson: Lesson
+    score: float
