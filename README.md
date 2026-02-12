@@ -269,8 +269,9 @@ See [`examples/`](examples/) for runnable scripts:
 | **AgentGate** | Human-in-the-loop approval gateway | [github.com/amitpaz1/agentgate](https://github.com/amitpaz1/agentgate) |
 | **FormBridge** | Structured data collection for AI agents | [github.com/amitpaz1/formbridge](https://github.com/amitpaz1/formbridge) |
 | **Lore** | Cross-agent memory and lesson sharing | **You are here** |
+| **AgentEval** | Testing & evaluation framework for AI agents | [github.com/amitpaz1/agenteval](https://github.com/amitpaz1/agenteval) |
 
-**Together:** Agents collect data (FormBridge) → request approval to act (AgentGate) → share lessons learned (Lore) → all observed and audited (AgentLens).
+**Together:** Agents collect data (FormBridge) → request approval to act (AgentGate) → share lessons learned (Lore) → all observed and audited (AgentLens) → tested and evaluated (AgentEval).
 
 ## License
 
