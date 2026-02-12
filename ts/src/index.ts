@@ -4,6 +4,9 @@ export type { Lesson, PublishOptions, ListOptions, QueryResult, QueryOptions, Em
 export type { Store } from './store/base.js';
 export { MemoryStore } from './store/memory.js';
 export { SqliteStore } from './store/sqlite.js';
+export { RemoteStore } from './store/remote.js';
+export type { RemoteStoreOptions } from './store/remote.js';
+export { LoreConnectionError, LoreAuthError, LessonNotFoundError } from './errors.js';
 export { RedactionPipeline, redact } from './redact.js';
 export { asPrompt } from './prompt.js';
 export { serializeEmbedding, deserializeEmbedding, cosineSimilarity, decayFactor, voteFactor } from './embed.js';

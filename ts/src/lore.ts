@@ -3,6 +3,7 @@ import { join } from 'path';
 import { ulid } from 'ulid';
 import type { Store } from './store/base.js';
 import { SqliteStore } from './store/sqlite.js';
+import { RemoteStore } from './store/remote.js';
 import type {
   Lesson,
   PublishOptions,
@@ -28,7 +29,9 @@ const DEFAULT_HALF_LIFE_DAYS = 30;
 export interface LoreOptions {
   project?: string;
   dbPath?: string;
-  store?: Store;
+  store?: Store | 'remote';
+  apiUrl?: string;
+  apiKey?: string;
   embeddingFn?: EmbeddingFn;
   redact?: boolean;
   redactPatterns?: RedactPattern[];
@@ -67,7 +70,12 @@ export class Lore {
       this.redactor = null;
     }
 
-    if (options?.store) {
+    if (options?.store === 'remote') {
+      if (!options.apiUrl || !options.apiKey) {
+        throw new Error('apiUrl and apiKey are required when store is "remote"');
+      }
+      this.store = new RemoteStore({ apiUrl: options.apiUrl, apiKey: options.apiKey });
+    } else if (options?.store && options.store !== 'remote') {
       this.store = options.store;
     } else {
       const dbPath = options?.dbPath ?? join(homedir(), '.lore', 'default.db');
