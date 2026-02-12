@@ -1,0 +1,59 @@
+/**
+ * Embedding utilities: serialization, cosine similarity, and decay scoring.
+ *
+ * Note: We do NOT bundle @xenova/transformers — the LocalEmbedder is an
+ * optional add-on. The core SDK uses EmbeddingFn or no embeddings at all.
+ */
+
+const EMBEDDING_DIM = 384;
+
+/** Serialize a float array to a Buffer (float32 LE, matching Python struct.pack). */
+export function serializeEmbedding(vec: number[]): Buffer {
+  const buf = Buffer.alloc(vec.length * 4);
+  for (let i = 0; i < vec.length; i++) {
+    buf.writeFloatLE(vec[i], i * 4);
+  }
+  return buf;
+}
+
+/** Deserialize a Buffer to a float array (float32 LE). */
+export function deserializeEmbedding(data: Buffer): number[] {
+  if (data.length % 4 !== 0) {
+    throw new Error(`Invalid embedding buffer length: ${data.length} (must be multiple of 4)`);
+  }
+  const count = data.length / 4;
+  const result: number[] = new Array(count);
+  for (let i = 0; i < count; i++) {
+    result[i] = data.readFloatLE(i * 4);
+  }
+  return result;
+}
+
+/** Cosine similarity between two vectors. Must be same length. */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new Error(`Vector length mismatch: ${a.length} vs ${b.length}`);
+  }
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  return denom < 1e-9 ? 0 : dot / denom;
+}
+
+/** Time-decay factor: 0.5^(ageDays / halfLifeDays). */
+export function decayFactor(ageDays: number, halfLifeDays: number): number {
+  return Math.pow(0.5, ageDays / halfLifeDays);
+}
+
+/** Vote factor: 1.0 + (upvotes - downvotes) * 0.1, clamped to min 0.1. */
+export function voteFactor(upvotes: number, downvotes: number): number {
+  return Math.max(1.0 + (upvotes - downvotes) * 0.1, 0.1);
+}
+
+export { EMBEDDING_DIM };

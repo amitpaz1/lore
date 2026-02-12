@@ -1,6 +1,9 @@
 export { Lore } from './lore.js';
 export type { LoreOptions } from './lore.js';
-export type { Lesson, PublishOptions, ListOptions } from './types.js';
+export type { Lesson, PublishOptions, ListOptions, QueryResult, QueryOptions, EmbeddingFn, RedactPattern } from './types.js';
 export type { Store } from './store/base.js';
 export { MemoryStore } from './store/memory.js';
 export { SqliteStore } from './store/sqlite.js';
+export { RedactionPipeline, redact } from './redact.js';
+export { asPrompt } from './prompt.js';
+export { serializeEmbedding, deserializeEmbedding, cosineSimilarity, decayFactor, voteFactor } from './embed.js';

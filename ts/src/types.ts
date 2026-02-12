@@ -36,3 +36,22 @@ export interface ListOptions {
   project?: string;
   limit?: number;
 }
+
+/** A query result containing a lesson and its relevance score. */
+export interface QueryResult {
+  lesson: Lesson;
+  score: number;
+}
+
+/** Options for querying lessons. */
+export interface QueryOptions {
+  tags?: string[];
+  limit?: number;
+  minConfidence?: number;
+}
+
+/** A user-provided embedding function. */
+export type EmbeddingFn = (text: string) => number[] | Promise<number[]>;
+
+/** A custom redaction pattern: [regex, label]. */
+export type RedactPattern = [RegExp | string, string];
