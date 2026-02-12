@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional
 
 try:
-    from fastapi import FastAPI, HTTPException, Request
+    from fastapi import Depends, FastAPI, HTTPException, Request
     from fastapi.responses import JSONResponse
     from pydantic import BaseModel
 except ImportError:
@@ -26,6 +26,7 @@ except ImportError:
         "python-ulid is required. Install with: pip install python-ulid"
     )
 
+from lore.server.auth import AuthContext, AuthError, get_auth_context
 from lore.server.config import settings
 from lore.server.db import close_pool, get_pool, init_pool, run_migrations
 
@@ -52,6 +53,14 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(AuthError)
+async def auth_error_handler(request: Request, exc: AuthError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.error_code},
+    )
 
 
 # ── Health ─────────────────────────────────────────────────────────
@@ -118,3 +127,11 @@ async def org_init(body: OrgInitRequest) -> OrgInitResponse:
         api_key=raw_key,
         key_prefix=key_prefix,
     )
+
+
+# ── Keys (placeholder — full impl in later story) ─────────────────
+
+@app.get("/v1/keys")
+async def list_keys(auth: AuthContext = Depends(get_auth_context)) -> dict:
+    """List API keys (requires auth). Placeholder for Story 4."""
+    return {"keys": [], "org_id": auth.org_id}
