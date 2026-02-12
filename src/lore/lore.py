@@ -69,12 +69,14 @@ class Lore:
         self,
         project: Optional[str] = None,
         db_path: Optional[str] = None,
-        store: Optional[Store] = None,
+        store: Optional[Union[Store, str]] = None,
         embedding_fn: Optional[EmbeddingFn] = None,
         embedder: Optional[Embedder] = None,
         redact: bool = True,
         redact_patterns: Optional[List[RedactPattern]] = None,
         decay_half_life_days: float = _DEFAULT_HALF_LIFE_DAYS,
+        api_url: Optional[str] = None,
+        api_key: Optional[str] = None,
     ) -> None:
         self.project = project
         self._half_life_days = decay_half_life_days
@@ -88,8 +90,17 @@ class Lore:
         else:
             self._redactor = None
 
-        if store is not None:
+        if isinstance(store, str) and store == "remote":
+            if not api_url or not api_key:
+                raise ValueError(
+                    "api_url and api_key are required when store='remote'"
+                )
+            from lore.store.remote import RemoteStore
+            self._store: Store = RemoteStore(api_url=api_url, api_key=api_key)
+        elif isinstance(store, Store):
             self._store = store
+        elif store is not None:
+            raise ValueError(f"store must be a Store instance or 'remote', got {store!r}")
         else:
             if db_path is None:
                 db_path = os.path.join(

@@ -27,6 +27,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+remote = [
+    "httpx>=0.24.0",
+]
 server = [
     "fastapi>=0.100.0",
     "uvicorn>=0.22.0",
