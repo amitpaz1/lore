@@ -29,6 +29,7 @@ except ImportError:
 from lore.server.auth import AuthContext, AuthError, get_auth_context
 from lore.server.config import settings
 from lore.server.db import close_pool, get_pool, init_pool, run_migrations
+from lore.server.routes.keys import router as keys_router
 from lore.server.routes.lessons import router as lessons_router
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ app = FastAPI(
 )
 
 
+app.include_router(keys_router)
 app.include_router(lessons_router)
 
 
@@ -133,9 +135,3 @@ async def org_init(body: OrgInitRequest) -> OrgInitResponse:
     )
 
 
-# ── Keys (placeholder — full impl in later story) ─────────────────
-
-@app.get("/v1/keys")
-async def list_keys(auth: AuthContext = Depends(get_auth_context)) -> dict:
-    """List API keys (requires auth). Placeholder for Story 4."""
-    return {"keys": [], "org_id": auth.org_id}

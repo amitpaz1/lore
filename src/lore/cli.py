@@ -78,6 +78,92 @@ def cmd_import(args: argparse.Namespace) -> None:
     print(f"Imported {count} lessons from {args.file}")
 
 
+def _get_api_config(args: argparse.Namespace) -> tuple:
+    """Get API URL and key from args or env vars."""
+    import os
+
+    api_url = getattr(args, "api_url", None) or os.environ.get("LORE_API_URL")
+    api_key = getattr(args, "api_key", None) or os.environ.get("LORE_API_KEY")
+    if not api_url:
+        print("Error: --api-url or LORE_API_URL required", file=sys.stderr)
+        sys.exit(1)
+    if not api_key:
+        print("Error: --api-key or LORE_API_KEY required", file=sys.stderr)
+        sys.exit(1)
+    return api_url.rstrip("/"), api_key
+
+
+def _api_request(
+    method: str, url: str, api_key: str, json_data: Optional[dict] = None
+) -> dict:
+    """Make an HTTP request to the Lore API."""
+    import urllib.request
+    import urllib.error
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    data = None
+    if json_data is not None:
+        data = json.dumps(json_data).encode()
+
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            if resp.status == 204:
+                return {}
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        try:
+            err = json.loads(body)
+            detail = err.get("detail", err.get("error", body))
+        except (json.JSONDecodeError, ValueError):
+            detail = body
+        print(f"Error {e.code}: {detail}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_keys_create(args: argparse.Namespace) -> None:
+    api_url, api_key = _get_api_config(args)
+    payload: dict = {"name": args.name}
+    if args.project:
+        payload["project"] = args.project
+    if getattr(args, "root", False):
+        payload["is_root"] = True
+    result = _api_request("POST", f"{api_url}/v1/keys", api_key, payload)
+    print(f"Created key: {result['id']}")
+    print(f"  Name:    {result['name']}")
+    print(f"  Project: {result.get('project') or '(all)'}")
+    print(f"  Key:     {result['key']}")
+    print()
+    print("⚠️  Save this key now — it will not be shown again.")
+
+
+def cmd_keys_list(args: argparse.Namespace) -> None:
+    api_url, api_key = _get_api_config(args)
+    result = _api_request("GET", f"{api_url}/v1/keys", api_key)
+    keys = result.get("keys", [])
+    if not keys:
+        print("No keys.")
+        return
+    print(f"{'ID':<28} {'Name':<20} {'Prefix':<14} {'Project':<15} {'Root':<6} {'Revoked'}")
+    print("-" * 100)
+    for k in keys:
+        print(
+            f"{k['id']:<28} {k['name']:<20} {k['key_prefix']:<14} "
+            f"{(k.get('project') or '-'):<15} {'yes' if k['is_root'] else 'no':<6} "
+            f"{'yes' if k['revoked'] else 'no'}"
+        )
+
+
+def cmd_keys_revoke(args: argparse.Namespace) -> None:
+    api_url, api_key = _get_api_config(args)
+    _api_request("DELETE", f"{api_url}/v1/keys/{args.key_id}", api_key)
+    print(f"Key {args.key_id} revoked.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="lore",
@@ -113,6 +199,22 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("import", help="Import lessons from JSON")
     p.add_argument("file", help="JSON file to import")
 
+    # keys
+    keys_parser = sub.add_parser("keys", help="Manage API keys (remote server)")
+    keys_parser.add_argument("--api-url", default=None, help="Lore API URL (or LORE_API_URL)")
+    keys_parser.add_argument("--api-key", default=None, help="Lore API key (or LORE_API_KEY)")
+    keys_sub = keys_parser.add_subparsers(dest="keys_command")
+
+    kc = keys_sub.add_parser("create", help="Create a new API key")
+    kc.add_argument("--name", required=True, help="Key name")
+    kc.add_argument("--project", default=None, help="Project scope (optional)")
+    kc.add_argument("--root", action="store_true", help="Create a root key")
+
+    keys_sub.add_parser("list", help="List all API keys")
+
+    kr = keys_sub.add_parser("revoke", help="Revoke an API key")
+    kr.add_argument("key_id", help="Key ID to revoke")
+
     return parser
 
 
@@ -123,6 +225,19 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     if not args.command:
         parser.print_help()
         sys.exit(1)
+
+    if args.command == "keys":
+        if not args.keys_command:
+            # Re-parse to get the keys subparser for help
+            parser.parse_args(["keys", "--help"])
+            return
+        keys_handlers = {
+            "create": cmd_keys_create,
+            "list": cmd_keys_list,
+            "revoke": cmd_keys_revoke,
+        }
+        keys_handlers[args.keys_command](args)
+        return
 
     handlers = {
         "publish": cmd_publish,
