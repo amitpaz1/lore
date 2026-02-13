@@ -32,6 +32,7 @@ from lore.server.db import close_pool, get_pool, init_pool, run_migrations
 from lore.server.middleware import install_middleware
 from lore.server.routes.keys import router as keys_router
 from lore.server.routes.lessons import router as lessons_router
+from lore.server.routes.sharing import router as sharing_router, rate_router
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,8 @@ app = FastAPI(
 
 app.include_router(keys_router)
 app.include_router(lessons_router)
+app.include_router(sharing_router)
+app.include_router(rate_router)
 
 # Install middleware and error handlers
 install_middleware(app)
