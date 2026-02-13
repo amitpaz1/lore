@@ -261,17 +261,19 @@ See [`examples/`](examples/) for runnable scripts:
 - [`custom_embeddings.py`](examples/custom_embeddings.py) — bring your own embedding function
 - [`redaction_demo.py`](examples/redaction_demo.py) — see redaction in action
 
-## 🔗 Part of the AgentKit Ecosystem
 
-| Project | What it does | Link |
-|---------|-------------|------|
-| **AgentLens** | Observability & audit trail for AI agents | [github.com/amitpaz1/agentlens](https://github.com/amitpaz1/agentlens) |
-| **AgentGate** | Human-in-the-loop approval gateway | [github.com/amitpaz1/agentgate](https://github.com/amitpaz1/agentgate) |
-| **FormBridge** | Structured data collection for AI agents | [github.com/amitpaz1/formbridge](https://github.com/amitpaz1/formbridge) |
-| **Lore** | Cross-agent memory and lesson sharing | **You are here** |
-| **AgentEval** | Testing & evaluation framework for AI agents | [github.com/amitpaz1/agenteval](https://github.com/amitpaz1/agenteval) |
+## 🧰 AgentKit Ecosystem
 
-**Together:** Agents collect data (FormBridge) → request approval to act (AgentGate) → share lessons learned (Lore) → all observed and audited (AgentLens) → tested and evaluated (AgentEval).
+| Project | Description | |
+|---------|-------------|-|
+| [AgentLens](https://github.com/agentkitai/agentlens) | Observability & audit trail for AI agents | |
+| **Lore** | Cross-agent memory and lesson sharing | ⬅️ you are here |
+| [AgentGate](https://github.com/agentkitai/agentgate) | Human-in-the-loop approval gateway | |
+| [FormBridge](https://github.com/agentkitai/formbridge) | Agent-human mixed-mode forms | |
+| [AgentEval](https://github.com/agentkitai/agenteval) | Testing & evaluation framework | |
+| [agentkit-mesh](https://github.com/agentkitai/agentkit-mesh) | Agent discovery & delegation | |
+| [agentkit-cli](https://github.com/agentkitai/agentkit-cli) | Unified CLI orchestrator | |
+| [agentkit-guardrails](https://github.com/agentkitai/agentkit-guardrails) | Reactive policy guardrails | |
 
 ## License
 
