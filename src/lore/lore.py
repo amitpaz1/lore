@@ -186,6 +186,46 @@ class Lore:
         Returns a list of QueryResult ordered by descending score
         (cosine similarity * decay).
         """
+        # Embed query text
+        query_vec = self._embedder.embed(text)
+
+        # For remote stores, delegate search to the server
+        from lore.store.remote import RemoteStore
+        if isinstance(self._store, RemoteStore):
+            return self._query_remote(query_vec, tags=tags, limit=limit)
+
+        return self._query_local(query_vec, tags=tags, limit=limit, min_confidence=min_confidence)
+
+    def _query_remote(
+        self,
+        query_vec: List[float],
+        tags: Optional[List[str]] = None,
+        limit: int = 5,
+    ) -> List[QueryResult]:
+        """Delegate semantic search to the remote Lore server."""
+        from lore.store.remote import RemoteStore, _response_to_lesson
+        assert isinstance(self._store, RemoteStore)
+        raw_results = self._store.search(
+            embedding=query_vec,
+            limit=limit,
+            tags=tags,
+            project=self.project,
+        )
+        results: List[QueryResult] = []
+        for item in raw_results:
+            score = item.get("score", 0.0)
+            lesson = _response_to_lesson(item)
+            results.append(QueryResult(lesson=lesson, score=float(score)))
+        return results
+
+    def _query_local(
+        self,
+        query_vec: List[float],
+        tags: Optional[List[str]] = None,
+        limit: int = 5,
+        min_confidence: float = 0.0,
+    ) -> List[QueryResult]:
+        """Client-side semantic search for local (SQLite) stores."""
         now = datetime.now(timezone.utc)
 
         # Get all candidates (scope to project if set)
@@ -217,10 +257,7 @@ class Lore:
         if not candidates:
             return []
 
-        # Embed query
-        query_vec = np.array(
-            self._embedder.embed(text), dtype=np.float32
-        )
+        query_arr = np.array(query_vec, dtype=np.float32)
 
         # Vectorized cosine similarity
         embeddings = np.array(
@@ -228,7 +265,7 @@ class Lore:
             dtype=np.float32,
         )
         # Normalize (embeddings should already be normalized, but be safe)
-        query_norm = query_vec / max(np.linalg.norm(query_vec), 1e-9)
+        query_norm = query_arr / max(np.linalg.norm(query_arr), 1e-9)
         emb_norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
         emb_norms = np.clip(emb_norms, 1e-9, None)
         embeddings_normed = embeddings / emb_norms
