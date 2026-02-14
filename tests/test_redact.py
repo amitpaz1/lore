@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import time
 
-import pytest
-
 from lore.redact.pipeline import RedactionPipeline, _luhn_check, redact
 
 

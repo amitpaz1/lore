@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 
 import pytest
 
@@ -73,7 +71,7 @@ class TestImportLessons:
 
     def test_import_skips_duplicates(self, tmp_path):
         lore = _make_lore()
-        lid = lore.publish(problem="p1", resolution="r1")
+        lore.publish(problem="p1", resolution="r1")
         path = str(tmp_path / "data.json")
         lore.export_lessons(path=path)
         # Import into same store — should skip

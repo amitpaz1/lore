@@ -9,7 +9,6 @@ from typing import Optional
 
 try:
     from fastapi import APIRouter, Depends, HTTPException, Query
-    from fastapi.responses import JSONResponse
 except ImportError:
     raise ImportError("FastAPI is required. Install with: pip install lore-sdk[server]")
 
@@ -251,7 +250,7 @@ async def update_lesson(
 ) -> LessonResponse:
     """Update a lesson. Supports atomic upvote/downvote."""
     scope_sql, scope_params = _scope_filter(auth)
-    base_idx = len(scope_params) + 1  # next param index
+    len(scope_params) + 1  # next param index
 
     # Build SET clause dynamically
     set_parts: list[str] = []

@@ -161,8 +161,8 @@ async def test_cache_avoids_second_db_lookup(client):
 
     with patch("lore.server.auth.get_pool", return_value=mock_pool), \
          patch("lore.server.routes.keys.get_pool", return_value=mock_pool):
-        resp1 = await client.get("/v1/keys", headers=headers)
-        resp2 = await client.get("/v1/keys", headers=headers)
+        await client.get("/v1/keys", headers=headers)
+        await client.get("/v1/keys", headers=headers)
 
     # Auth fetchrow called once; keys router also calls fetch (list)
     assert mock_conn.fetchrow.call_count == 1
@@ -180,7 +180,7 @@ async def test_cache_expires_after_ttl(client):
     with patch("lore.server.auth.get_pool", return_value=mock_pool), \
          patch("lore.server.routes.keys.get_pool", return_value=mock_pool):
         # First request — populates cache
-        resp1 = await client.get("/v1/keys", headers=headers)
+        await client.get("/v1/keys", headers=headers)
         assert mock_conn.fetchrow.call_count == 1
 
         # Expire the cache entry by backdating its timestamp
@@ -189,7 +189,7 @@ async def test_cache_expires_after_ttl(client):
             _key_cache[k] = (row_data, time.monotonic() - 120)
 
         # Second request — cache expired, hits DB again
-        resp2 = await client.get("/v1/keys", headers=headers)
+        await client.get("/v1/keys", headers=headers)
         assert mock_conn.fetchrow.call_count == 2
 
 

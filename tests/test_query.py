@@ -6,7 +6,6 @@ import time
 from typing import List
 
 import numpy as np
-import pytest
 
 from lore import Lore, QueryResult
 from lore.store.memory import MemoryStore

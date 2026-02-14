@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import struct
 from typing import Any, Dict, List, Optional
 
@@ -119,7 +118,7 @@ class RemoteStore(Store):
     def save(self, lesson: Lesson) -> None:
         """Save a lesson via POST /v1/lessons."""
         payload = _lesson_to_dict(lesson)
-        resp = self._request("POST", "/v1/lessons", json_data=payload)
+        self._request("POST", "/v1/lessons", json_data=payload)
         # Server returns {"id": "..."} — we don't need to update lesson.id
         # because Lore class already set it.
 

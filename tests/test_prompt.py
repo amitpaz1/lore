@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import List
 
 import numpy as np
-import pytest
 
 from lore import Lore, QueryResult, as_prompt
 from lore.store.memory import MemoryStore

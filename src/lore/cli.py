@@ -97,8 +97,8 @@ def _api_request(
     method: str, url: str, api_key: str, json_data: Optional[dict] = None
 ) -> dict:
     """Make an HTTP request to the Lore API."""
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     headers = {
         "Authorization": f"Bearer {api_key}",

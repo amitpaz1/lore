@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 import secrets
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator
 
 try:
-    from fastapi import Depends, FastAPI, HTTPException, Request
+    from fastapi import FastAPI, HTTPException, Request
     from fastapi.responses import JSONResponse
     from pydantic import BaseModel
 except ImportError:
@@ -26,13 +25,14 @@ except ImportError:
         "python-ulid is required. Install with: pip install python-ulid"
     )
 
-from lore.server.auth import AuthContext, AuthError, get_auth_context
+from lore.server.auth import AuthError
 from lore.server.config import settings
 from lore.server.db import close_pool, get_pool, init_pool, run_migrations
 from lore.server.middleware import install_middleware
 from lore.server.routes.keys import router as keys_router
 from lore.server.routes.lessons import router as lessons_router
-from lore.server.routes.sharing import router as sharing_router, rate_router
+from lore.server.routes.sharing import rate_router
+from lore.server.routes.sharing import router as sharing_router
 
 logger = logging.getLogger(__name__)
 

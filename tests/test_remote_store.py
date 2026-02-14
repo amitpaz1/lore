@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import struct
-from typing import Any, Dict, List
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -13,7 +12,6 @@ import pytest
 from lore.exceptions import LessonNotFoundError, LoreAuthError, LoreConnectionError
 from lore.store.remote import RemoteStore, _lesson_to_dict, _response_to_lesson
 from lore.types import Lesson
-
 
 # ── Helpers ────────────────────────────────────────────────────────
 

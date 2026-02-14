@@ -16,7 +16,6 @@ from httpx import ASGITransport, AsyncClient
 
 from lore.server.app import app
 
-
 RAW_KEY = "lore_sk_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
 KEY_HASH = hashlib.sha256(RAW_KEY.encode()).hexdigest()
 
@@ -171,7 +170,6 @@ async def test_revoke_key_not_found(client):
 
     # First fetchrow is auth, second is key lookup returning None
     call_count = 0
-    original_fetchrow = mock_conn.fetchrow
 
     async def fetchrow_side_effect(*args, **kwargs):
         nonlocal call_count

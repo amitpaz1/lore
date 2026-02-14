@@ -8,9 +8,8 @@ from typing import List
 import numpy as np
 import pytest
 
-from lore import Lore, LessonNotFoundError
+from lore import LessonNotFoundError, Lore
 from lore.store.memory import MemoryStore
-from lore.types import Lesson
 
 _DIM = 384
 

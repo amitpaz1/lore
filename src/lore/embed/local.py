@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 from typing import List, Optional
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
 
 import numpy as np
 

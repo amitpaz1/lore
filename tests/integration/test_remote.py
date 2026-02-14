@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -25,7 +25,7 @@ from httpx import ASGITransport, AsyncClient
 
 from lore.server.app import app
 from lore.server.auth import _key_cache, _last_used_updates
-from lore.server.middleware import get_rate_limiter, set_rate_limiter, RateLimiter
+from lore.server.middleware import RateLimiter, set_rate_limiter
 
 # ── Constants ──────────────────────────────────────────────────────
 
@@ -192,7 +192,7 @@ async def test_full_flow_publish_query_verify(client: AsyncClient) -> None:
 
         # Step 2: Query back
         get_resp = await client.get(
-            f"/v1/lessons/lesson-flow-001",
+            "/v1/lessons/lesson-flow-001",
             headers=headers,
         )
         assert get_resp.status_code == 200

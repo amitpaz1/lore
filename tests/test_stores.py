@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import os
 import tempfile
-from typing import Generator
+from typing import Generator, List
 
 import pytest
-
-from typing import List
 
 from lore import Lesson, Lore
 from lore.store.base import Store
