@@ -2,7 +2,81 @@
 
 from __future__ import annotations
 
+import time
+
+import pytest
+
 from lore.server.rate_limit import MemoryBackend, RedisBackend
+
+
+def _redis_available() -> bool:
+    """Check if Redis is reachable at localhost:6379."""
+    try:
+        import redis as redis_lib
+        r = redis_lib.Redis(host="localhost", port=6379, socket_connect_timeout=1)
+        r.ping()
+        return True
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(not _redis_available(), reason="Redis not available at localhost:6379")
+class TestRedisBackendIntegration:
+    """Integration tests against a real running Redis."""
+
+    REDIS_URL = "redis://localhost:6379/15"  # Use DB 15 to avoid conflicts
+
+    def setup_method(self):
+        self.backend = RedisBackend(self.REDIS_URL, max_requests=5, window_seconds=2)
+        self.backend.clear()
+
+    def teardown_method(self):
+        self.backend.clear()
+
+    def test_allows_under_limit(self):
+        allowed, retry, remaining, limit = self.backend.is_allowed("integ-key1")
+        assert allowed is True
+        assert remaining == 4
+        assert limit == 5
+
+    def test_blocks_over_limit(self):
+        for _ in range(5):
+            self.backend.is_allowed("integ-key2")
+        allowed, retry, remaining, limit = self.backend.is_allowed("integ-key2")
+        assert allowed is False
+        assert remaining == 0
+        assert retry >= 1
+
+    def test_remaining_decrements(self):
+        for i in range(5):
+            allowed, _, remaining, _ = self.backend.is_allowed("integ-key3")
+            assert allowed is True
+            assert remaining == 4 - i
+
+    def test_sliding_window_resets(self):
+        """Make requests up to the limit, wait for window to expire, verify reset."""
+        for _ in range(5):
+            self.backend.is_allowed("integ-key4")
+        allowed, _, _, _ = self.backend.is_allowed("integ-key4")
+        assert allowed is False
+
+        # Wait for the 2-second window to expire
+        time.sleep(2.5)
+
+        allowed, _, remaining, _ = self.backend.is_allowed("integ-key4")
+        assert allowed is True
+        assert remaining == 4
+
+    def test_separate_keys_isolated(self):
+        for _ in range(5):
+            self.backend.is_allowed("integ-key5a")
+        allowed, _, _, _ = self.backend.is_allowed("integ-key5a")
+        assert allowed is False
+
+        # Different key should be unaffected
+        allowed, _, remaining, _ = self.backend.is_allowed("integ-key5b")
+        assert allowed is True
+        assert remaining == 4
 
 
 class TestMemoryBackend:

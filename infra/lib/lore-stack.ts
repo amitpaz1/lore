@@ -199,14 +199,26 @@ def handler(event, context):
     });
 
     // ── DATABASE_URL secret (composite) ────────────────────────────
-    // Build DATABASE_URL from RDS endpoint + credentials
-    const databaseUrlSecret = new secretsmanager.Secret(this, 'DatabaseUrlSecret', {
-      secretName: `${prefix}/database-url`,
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        // At deploy time this resolves; the ECS task reads the secret at runtime
-        `postgresql://${dbSecret.secretValueFromJson('username').unsafeUnwrap()}:${dbSecret.secretValueFromJson('password').unsafeUnwrap()}@${dbInstance.dbInstanceEndpointAddress}:${dbInstance.dbInstanceEndpointPort}/lore`
-      ),
+    // Build DATABASE_URL from RDS endpoint + credentials. Uses Fn::Join with
+    // dynamic secret references so the password is resolved at deploy time by
+    // CloudFormation — it never appears as plaintext in the template.
+    const cfnDatabaseUrlSecret = new secretsmanager.CfnSecret(this, 'DatabaseUrlSecret', {
+      name: `${prefix}/database-url`,
+      secretString: cdk.Fn.join('', [
+        'postgresql://',
+        dbSecret.secretValueFromJson('username').unsafeUnwrap(),
+        ':',
+        dbSecret.secretValueFromJson('password').unsafeUnwrap(),
+        '@',
+        dbInstance.dbInstanceEndpointAddress,
+        ':',
+        dbInstance.dbInstanceEndpointPort,
+        '/lore',
+      ]),
     });
+    const databaseUrlSecret = secretsmanager.Secret.fromSecretNameV2(
+      this, 'DatabaseUrlSecretLookup', `${prefix}/database-url`,
+    );
 
     // ── Fargate Service + ALB ──────────────────────────────────────
     const taskRole = new iam.Role(this, 'TaskRole', {
