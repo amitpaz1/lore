@@ -19,7 +19,7 @@ try:
 except ImportError:
     raise ImportError("python-ulid is required. Install with: pip install python-ulid")
 
-from lore.server.auth import AuthContext, _key_cache, get_auth_context
+from lore.server.auth import AuthContext, _key_cache, get_auth_context, require_role
 from lore.server.db import get_pool
 
 logger = logging.getLogger(__name__)
@@ -61,8 +61,8 @@ class KeyListResponse(BaseModel):
 
 
 def _require_root(auth: AuthContext) -> None:
-    """Raise 403 if the caller is not a root key."""
-    if not auth.is_root:
+    """Raise 403 if the caller is not a root key / admin role."""
+    if not auth.is_root and auth.role != "admin":
         raise HTTPException(status_code=403, detail="Root key required")
 
 

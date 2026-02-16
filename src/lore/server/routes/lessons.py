@@ -17,7 +17,7 @@ try:
 except ImportError:
     raise ImportError("python-ulid is required. Install with: pip install python-ulid")
 
-from lore.server.auth import AuthContext, get_auth_context
+from lore.server.auth import AuthContext, get_auth_context, require_role
 from lore.server.db import get_pool
 from lore.server.models import (
     LessonCreateRequest,
@@ -82,7 +82,7 @@ def _scope_filter(auth: AuthContext) -> tuple[str, list]:
 @router.post("", response_model=LessonCreateResponse, status_code=201)
 async def create_lesson(
     body: LessonCreateRequest,
-    auth: AuthContext = Depends(get_auth_context),
+    auth: AuthContext = Depends(require_role("writer", "admin")),
 ) -> LessonCreateResponse:
     """Create a new lesson."""
     # Project-scoped key: force project
@@ -246,7 +246,7 @@ async def get_lesson(
 async def update_lesson(
     lesson_id: str,
     body: LessonUpdateRequest,
-    auth: AuthContext = Depends(get_auth_context),
+    auth: AuthContext = Depends(require_role("writer", "admin")),
 ) -> LessonResponse:
     """Update a lesson. Supports atomic upvote/downvote."""
     scope_sql, scope_params = _scope_filter(auth)
@@ -313,7 +313,7 @@ async def update_lesson(
 @router.delete("/{lesson_id}", status_code=204)
 async def delete_lesson(
     lesson_id: str,
-    auth: AuthContext = Depends(get_auth_context),
+    auth: AuthContext = Depends(require_role("writer", "admin")),
 ) -> None:
     """Delete a lesson."""
     scope_sql, scope_params = _scope_filter(auth)
@@ -465,7 +465,7 @@ async def export_lessons(
 @router.post("/import", response_model=LessonImportResponse)
 async def import_lessons(
     body: LessonImportRequest,
-    auth: AuthContext = Depends(get_auth_context),
+    auth: AuthContext = Depends(require_role("writer", "admin")),
 ) -> LessonImportResponse:
     """Bulk import (upsert) lessons."""
     now = datetime.now(timezone.utc)
