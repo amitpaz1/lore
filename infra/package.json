@@ -1,0 +1,21 @@
+{
+  "name": "lore-infra",
+  "version": "1.0.0",
+  "bin": {
+    "lore-infra": "bin/app.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "synth": "cdk synth",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "typescript": "~5.3.0",
+    "aws-cdk": "2.178.2",
+    "@types/node": "^20.0.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.178.2",
+    "constructs": "^10.0.0"
+  }
+}
