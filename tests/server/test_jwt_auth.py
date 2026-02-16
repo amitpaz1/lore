@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,6 +12,7 @@ pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
 
 from httpx import ASGITransport, AsyncClient
+
 from lore.server.app import app
 from lore.server.auth import _reset_oidc_validator
 from lore.server.config import Settings

@@ -19,7 +19,7 @@ try:
 except ImportError:
     raise ImportError("python-ulid is required. Install with: pip install python-ulid")
 
-from lore.server.auth import AuthContext, _key_cache, get_auth_context, require_role
+from lore.server.auth import AuthContext, _key_cache, get_auth_context
 from lore.server.db import get_pool
 
 logger = logging.getLogger(__name__)

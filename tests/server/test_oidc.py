@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-import json
 import time
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 pytest.importorskip("jwt")
 
 import jwt
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
-from lore.server.oidc import OidcIdentity, OidcValidator
-
+from lore.server.oidc import OidcValidator
 
 # ── RSA key fixtures ───────────────────────────────────────────────
 

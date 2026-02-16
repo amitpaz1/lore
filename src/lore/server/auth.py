@@ -7,8 +7,8 @@ import hashlib
 import hmac
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Tuple
 
 try:
     from fastapi import Depends, HTTPException, Request
