@@ -275,6 +275,69 @@ See [`examples/`](examples/) for runnable scripts:
 | [agentkit-cli](https://github.com/agentkitai/agentkit-cli) | Unified CLI orchestrator | |
 | [agentkit-guardrails](https://github.com/agentkitai/agentkit-guardrails) | Reactive policy guardrails | |
 
+## Enterprise Usage Patterns
+
+### LoreClient — Hardened Async SDK
+
+For production/enterprise use, `LoreClient` provides retry logic, graceful degradation, connection pooling, and optional batching:
+
+```python
+from lore import LoreClient
+
+# Reads LORE_URL, LORE_API_KEY, LORE_ORG_ID, LORE_TIMEOUT from env
+async with LoreClient() as client:
+    # Save a lesson — returns None if server is unreachable (never raises)
+    lesson_id = await client.save(
+        problem="Rate limit exceeded on OpenAI API",
+        resolution="Add exponential backoff with jitter",
+        tags=["openai", "rate-limit"],
+    )
+
+    # Recall lessons — returns [] if server is unreachable (never raises)
+    results = await client.recall("how to handle rate limits", limit=5)
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LORE_URL` | `http://localhost:8765` | Lore server URL |
+| `LORE_API_KEY` | *(empty)* | API key for authentication |
+| `LORE_ORG_ID` | *(empty)* | Organization ID (multi-tenant) |
+| `LORE_TIMEOUT` | `5` | Request timeout in seconds |
+
+### Retry & Graceful Degradation
+
+- **Retries:** 3 attempts with exponential backoff (0.5s → 1s → 2s) on 5xx and connection errors only
+- **Graceful degradation:** `save()` returns `None` and `recall()` returns `[]` if the server is unreachable — they never raise exceptions
+- **Connection pooling:** A single `httpx.AsyncClient` is reused across all calls
+
+### Batched Saves
+
+For high-throughput scenarios, enable batching to buffer saves and flush periodically:
+
+```python
+async with LoreClient(batch=True, batch_size=10, batch_interval=5.0) as client:
+    # These are buffered and flushed every 5s or every 10 items
+    await client.save(problem="...", resolution="...")
+    await client.save(problem="...", resolution="...")
+    # Remaining items flush automatically on close
+```
+
+### Constructor Parameters
+
+```python
+LoreClient(
+    url="http://lore.internal:8765",  # or use LORE_URL env var
+    api_key="sk-...",                  # or use LORE_API_KEY env var
+    org_id="my-org",                   # or use LORE_ORG_ID env var
+    timeout=10.0,                      # or use LORE_TIMEOUT env var
+    batch=False,                       # enable batched saves
+    batch_size=10,                     # flush after N buffered items
+    batch_interval=5.0,                # flush every N seconds
+)
+```
+
 ## License
 
 MIT
