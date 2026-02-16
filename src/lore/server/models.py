@@ -28,6 +28,13 @@ class LessonCreateRequest(BaseModel):
     expires_at: Optional[datetime] = None
     meta: Dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("embedding")
+    @classmethod
+    def validate_embedding_dim(cls, v: Optional[List[float]]) -> Optional[List[float]]:
+        if v is not None and len(v) != 384:
+            raise ValueError(f"Embedding must be 384 dimensions, got {len(v)}")
+        return v
+
 
 class LessonCreateResponse(BaseModel):
     """Response for POST /v1/lessons."""
