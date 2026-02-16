@@ -10,7 +10,7 @@ from typing import AsyncIterator
 
 try:
     from fastapi import FastAPI, HTTPException, Request
-    from fastapi.responses import JSONResponse
+    from fastapi.responses import JSONResponse, Response
     from pydantic import BaseModel
 except ImportError:
     raise ImportError(
@@ -28,12 +28,14 @@ except ImportError:
 from lore.server.auth import AuthError
 from lore.server.config import settings
 from lore.server.db import close_pool, get_pool, init_pool, run_migrations
+from lore.server.logging_config import setup_logging
 from lore.server.middleware import install_middleware
 from lore.server.routes.keys import router as keys_router
 from lore.server.routes.lessons import router as lessons_router
 from lore.server.routes.sharing import rate_router
 from lore.server.routes.sharing import router as sharing_router
 
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -82,6 +84,52 @@ async def auth_error_handler(request: Request, exc: AuthError) -> JSONResponse:
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/ready")
+async def ready() -> JSONResponse:
+    """Readiness probe: checks DB pool and pgvector extension."""
+    checks: dict = {"db": False, "pgvector": False}
+    try:
+        from lore.server.db import _pool
+
+        if _pool is None:
+            return JSONResponse(
+                status_code=503,
+                content={"status": "not_ready", "checks": checks},
+            )
+
+        async with _pool.acquire() as conn:
+            await conn.fetchval("SELECT 1")
+            checks["db"] = True
+
+            result = await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'vector')"
+            )
+            checks["pgvector"] = bool(result)
+    except Exception:
+        logger.exception("Readiness check failed")
+
+    all_ok = all(checks.values())
+    status_code = 200 if all_ok else 503
+    status = "ok" if all_ok else "not_ready"
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": status, "checks": checks},
+    )
+
+
+# ── Metrics ────────────────────────────────────────────────────────
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    """Prometheus metrics endpoint."""
+    if not settings.metrics_enabled:
+        return JSONResponse(status_code=404, content={"error": "metrics_disabled"})
+    from lore.server.metrics import collect_all
+
+    return Response(content=collect_all(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 # ── Org Init ───────────────────────────────────────────────────────

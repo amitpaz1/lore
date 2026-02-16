@@ -27,6 +27,40 @@ jobs:
       - name: Test
         run: pytest
 
+  python-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: lore
+          POSTGRES_PASSWORD: lore
+          POSTGRES_DB: lore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lore"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,server]"
+      - name: Enable pgvector extension
+        run: |
+          PGPASSWORD=lore psql -h localhost -U lore -d lore_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+      - name: Test with PostgreSQL
+        env:
+          DATABASE_URL: postgresql://lore:lore@localhost:5432/lore_test
+        run: pytest tests/server/ -v
+
   typescript:
     runs-on: ubuntu-latest
     strategy:

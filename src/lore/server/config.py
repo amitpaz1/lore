@@ -25,6 +25,11 @@ class Settings:
     # Auth mode: "dual" | "oidc-required" | "api-key-only"
     auth_mode: str = "api-key-only"
 
+    # Observability
+    metrics_enabled: bool = True
+    log_format: str = "pretty"  # "json" or "pretty"
+    log_level: str = "INFO"
+
     @classmethod
     def from_env(cls) -> Settings:
         return cls(
@@ -37,6 +42,9 @@ class Settings:
             oidc_role_claim=os.environ.get("OIDC_ROLE_CLAIM", "role"),
             oidc_org_claim=os.environ.get("OIDC_ORG_CLAIM", "tenant_id"),
             auth_mode=os.environ.get("AUTH_MODE", "api-key-only"),
+            metrics_enabled=os.environ.get("METRICS_ENABLED", "true").lower() in ("true", "1", "yes"),
+            log_format=os.environ.get("LOG_FORMAT", "pretty"),
+            log_level=os.environ.get("LOG_LEVEL", "INFO").upper(),
         )
 
 

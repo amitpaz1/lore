@@ -88,6 +88,49 @@ def set_rate_limiter(limiter: RateLimiter) -> None:
 MAX_BODY_SIZE = 1_048_576
 
 
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    """Add request ID and structured logging context, collect HTTP metrics."""
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        import uuid
+        request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+        request.state.request_id = request_id
+
+        start = time.monotonic()
+        response = await call_next(request)
+        duration = time.monotonic() - start
+
+        response.headers["X-Request-Id"] = request_id
+
+        # Collect HTTP metrics (skip /metrics and /health to avoid noise)
+        path = request.url.path
+        if path not in ("/metrics", "/health"):
+            try:
+                from lore.server.config import settings as _s
+                from lore.server.metrics import http_request_duration, http_requests_total
+                if _s.metrics_enabled:
+                    http_requests_total.inc(method=request.method, path=path, status=str(response.status_code))
+                    http_request_duration.observe(duration, method=request.method, path=path)
+            except Exception:
+                pass
+
+        # Structured request logging
+        req_logger = logging.getLogger("lore.server.access")
+        req_logger.info(
+            "request",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": path,
+                "status": response.status_code,
+                "latency_ms": round(duration * 1000, 2),
+                "org_id": getattr(getattr(request, "state", None), "org_id", None),
+            },
+        )
+
+        return response
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Apply rate limiting based on the API key in the Authorization header."""
 
@@ -210,7 +253,8 @@ def install_error_handlers(app: FastAPI) -> None:
 
 def install_middleware(app: FastAPI) -> None:
     """Install all middleware on the app."""
-    # Order matters: body size check first, then rate limiting
+    # Order matters: outermost runs first (added last)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(BodySizeLimitMiddleware)
+    app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
