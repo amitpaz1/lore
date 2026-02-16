@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import defaultdict
 from typing import Callable, Dict, List, Optional
@@ -82,6 +83,53 @@ def set_rate_limiter(limiter: RateLimiter) -> None:
     _rate_limiter = limiter
 
 
+# ── Path normalization ─────────────────────────────────────────────
+
+# Patterns that look like dynamic path segments (UUIDs, hex IDs, numeric IDs)
+_DYNAMIC_SEGMENT_RE = re.compile(
+    r"""
+    (?:^|/)                        # start or slash
+    (?:
+        [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}  # UUID
+      | [0-9a-f]{24,}             # long hex (MongoDB ObjectId, etc.)
+      | [0-9]+                     # numeric ID
+    )
+    (?=/|$)                        # followed by slash or end
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+
+def normalize_path(path: str) -> str:
+    """Replace dynamic path segments (UUIDs, hex IDs, numeric IDs) with :id.
+
+    Keeps the leading slash of each segment intact.
+    Examples:
+        /v1/lessons/abc123def456abc123def456 -> /v1/lessons/:id
+        /v1/lessons/550e8400-e29b-41d4-a716-446655440000 -> /v1/lessons/:id
+        /v1/orgs/42/lessons -> /v1/orgs/:id/lessons
+    """
+    # Split on / and replace dynamic segments
+    parts = path.split("/")
+    normalized = []
+    for part in parts:
+        if not part:
+            normalized.append(part)
+            continue
+        # UUID
+        if re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", part, re.IGNORECASE):
+            normalized.append(":id")
+        # Long hex (24+ chars, e.g. MongoDB ObjectId)
+        elif re.fullmatch(r"[0-9a-f]{24,}", part, re.IGNORECASE):
+            normalized.append(":id")
+        # Pure numeric
+        elif re.fullmatch(r"[0-9]+", part):
+            normalized.append(":id")
+        else:
+            normalized.append(part)
+    return "/".join(normalized)
+
+
 # ── Middleware ─────────────────────────────────────────────────────
 
 # Max request body size: 1MB
@@ -109,8 +157,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 from lore.server.config import settings as _s
                 from lore.server.metrics import http_request_duration, http_requests_total
                 if _s.metrics_enabled:
-                    http_requests_total.inc(method=request.method, path=path, status=str(response.status_code))
-                    http_request_duration.observe(duration, method=request.method, path=path)
+                    normalized = normalize_path(path)
+                    http_requests_total.inc(method=request.method, path=normalized, status=str(response.status_code))
+                    http_request_duration.observe(duration, method=request.method, path=normalized)
             except Exception:
                 pass
 
